@@ -1,10 +1,10 @@
 import mysql.connector as sql # from dotenv import load_dotenv
 import os
 from typing import Tuple
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 from mysql.connector import Error
 
-load_dotenv()
+load_dotenv(override=True)
 
 # TODO-1: MySQL connection Method
 def connect_to_mysql(host:str='localhost', user:str='root', port:int=3306, database:str=None) -> Tuple[sql.connection.MySQLConnection, sql.connection.MySQLCursor]:
@@ -20,12 +20,14 @@ def connect_to_mysql(host:str='localhost', user:str='root', port:int=3306, datab
         Tuple[sql.connection.MySQLConnection, sql.connection.MySQLCursor]: returns sql connection string and cursor in form of tuple
     """
 
-    connection = sql.connect(host=host, user=user, port=port, password=os.environ['PASSWORD'], database=database)
+    try:
+        connection = sql.connect(host=host, user=user, port=port, password=os.environ['PASSWORD'], database=database)
 
-    cursor = connection.cursor()
-    return connection, cursor
-        
-# connect_to_mysql()
+        cursor = connection.cursor()
+        return connection, cursor
+    except Error as conn_err:
+        raise(conn_err)
+
 
 # TODO-2: Database Creation Method
 def create_database(conn:sql.connection.MySQLConnection, cursor:sql.connection.MySQLCursor) -> bool :
@@ -47,9 +49,8 @@ def create_database(conn:sql.connection.MySQLConnection, cursor:sql.connection.M
         conn.commit()
         print("Database Created")
         return True
-    except Exception as db_create_err:
-        print("Error occured while creating database: ", db_create_err)
-        return False
+    except Error as db_create_err:
+        raise(db_create_err)
 
 
 # TODO-3: Table Creation Method
@@ -75,9 +76,8 @@ def create_table(conn:sql.connection.MySQLConnection, cursor:sql.connection.MySQ
         conn.commit()
         print("Table Created")
         return True
-    except Exception as tb_create_err:
-        print("Error occured while creating table: ", tb_create_err)
-        return False
+    except Error as tb_create_err:
+        raise(tb_create_err)
 
 
 # TODO-4: Inserting Data to Table
@@ -114,9 +114,8 @@ def insert_data_to_table(conn:sql.connection.MySQLConnection, cursor:sql.connect
         conn.commit()
         print("Data Inserted To table")
         return True
-    except Exception as insert_error:
-        print("Error occurred while inserting data to table: ", insert_error)
-        return False
+    except Error as insert_error:
+        raise(insert_error)
 
 
 # TODO-5: Fetch Data Method
@@ -131,12 +130,16 @@ def get_data_from_table(table:str, cursor:sql.connection.MySQLCursor, database:s
     Returns:
         list: returns retrived data in form of list
     """
-    query_use_db = f"USE {database};"
-    query_get_data = f"select * from {table};"
-    
-    cursor.execute(query_use_db)
-    cursor.execute(query_get_data)
-    return cursor.fetchall()
+    try:
+        query_use_db = f"USE {database};"
+        query_get_data = f"select * from {table};"
+        
+        cursor.execute(query_use_db)
+        cursor.execute(query_get_data)
+        return cursor.fetchall()
+    except Error as pull_data_error:
+        raise(pull_data_error)
+        
 
 
 # TODO-6: Close Connection Method
@@ -156,23 +159,28 @@ def close_connection(curs:sql.connection.MySQLCursor, conn:sql.connection.MySQLC
         conn.close()
         print("Connection Closed")
         return True
-    except Exception as conn_error:
-        print("Error while closing connection: ", conn_error)
-        return False
-    
+    except Error as conn_error:
+        raise(conn_error)
 
+
+
+""" optimize this code to return direct error without crashing code in this case
+A). when connection to sserver failed then what to do as exception will also throw error while rollback
+"""
 def main():
     try:
-        conn, curs = connect_to_mysql(host=os.environ['HOST'], user=os.environ['USER'], port=os.environ['PORT'])
+        conn, curs = connect_to_mysql(host=os.environ['HOST'], user=os.environ['USER'], port=os.environ['PORT'], database=os.environ['DATABASE'])
         create_database(conn, curs)
         create_table(conn=conn,cursor= curs, database=os.environ['DATABASE'])
         insert_data_to_table(conn=conn, database=os.environ['DATABASE'], cursor=curs, table="students")
         returned_data = get_data_from_table(table='students', cursor=curs, database=os.environ['DATABASE'])
         [print (i) for i in returned_data ]
-        close_connection(curs, conn)
-    except Error as e:
+
+    except Error as error:
         conn.rollback()
-        print(e)
+        print(error)
+    finally:
+        close_connection(curs=curs, conn=conn)
 
 
 if __name__ == '__main__':
