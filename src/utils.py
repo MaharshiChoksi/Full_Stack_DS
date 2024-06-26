@@ -1,13 +1,17 @@
-import mysql.connector as sql # from dotenv import load_dotenv
-import os
-from typing import Tuple
-from dotenv import load_dotenv, find_dotenv
+from dotenv import load_dotenv
 from mysql.connector import Error
+from typing import Tuple
+import mysql.connector as sql  # from dotenv import load_dotenv
+import os
+import pandas as pd
 
 load_dotenv(override=True)
 
 # TODO-1: MySQL connection Method
-def connect_to_mysql(host:str='localhost', user:str='root', port:int=3306, database:str=None) -> Tuple[sql.connection.MySQLConnection, sql.connection.MySQLCursor]:
+def connect_to_mysql(host:str,
+                     user:str,
+                     port:int, 
+                     database:str=None) -> Tuple[sql.connection.MySQLConnection, sql.connection.MySQLCursor]:
     """ Connection to MySQL Server
 
     Args:
@@ -22,7 +26,6 @@ def connect_to_mysql(host:str='localhost', user:str='root', port:int=3306, datab
 
     try:
         connection = sql.connect(host=host, user=user, port=port, password=os.environ['PASSWORD'], database=database)
-
         cursor = connection.cursor()
         return connection, cursor
     except Error as conn_err:
@@ -30,7 +33,7 @@ def connect_to_mysql(host:str='localhost', user:str='root', port:int=3306, datab
 
 
 # TODO-2: Database Creation Method
-def create_database(conn:sql.connection.MySQLConnection, cursor:sql.connection.MySQLCursor) -> bool :
+def create_database(cursor:sql.connection.MySQLCursor, dbname:str) -> bool :
     """ Drop database if exists and create new one
 
     Args:
@@ -42,25 +45,32 @@ def create_database(conn:sql.connection.MySQLConnection, cursor:sql.connection.M
     """
     
     try:
-        query_drop_database= "DROP DATABASE IF EXISTS ds_practice;"
-        query_create_database= "CREATE DATABASE ds_practice;"
+        query_drop_database= f"DROP DATABASE IF EXISTS {dbname};"
+        query_create_database= f"CREATE DATABASE {dbname};"
         cursor.execute(query_drop_database)
         cursor.execute(query_create_database)
-        conn.commit()
         print("Database Created")
-        return True
+        cursor.execute("SHOW DATABASES;")  
+        databases = cursor.fetchall()  
+        return databases  
+
     except Error as db_create_err:
         raise(db_create_err)
 
 
 # TODO-3: Table Creation Method
-def create_table(conn:sql.connection.MySQLConnection, cursor:sql.connection.MySQLCursor, database:str) -> bool:
-    """ drops table if exists and create new one with provided parameters for columns 
+def create_table(cursor:sql.connection.MySQLCursor,
+                 database:str,
+                 tbname:str,
+                 col_type:str) -> bool:
+    
+    """ Drops table if exists and create new one with provided parameters for columns
 
     Args:
-        conn (sql.connection.MySQLConnection:  connection string as argument
         cursor (sql.connection.MySQLCursor):  cursor string as argument
         database (str): database name to insert table 
+        tbname (str): table name for creating table
+        col_type (str): columns with its data types
 
     Returns:
         bool: returns True/False if query executed successfully or not
@@ -68,12 +78,11 @@ def create_table(conn:sql.connection.MySQLConnection, cursor:sql.connection.MySQ
     
     try:
         query_db = f"USE {database};"
-        query_drop_table = "DROP TABLE IF EXISTS students;"
-        query_create_table = "CREATE TABLE students(id int NOT NULL, first_name varchar(255) NOT NULL, last_name varchar(255) NOT NULL, age int NOT NULL, phone bigint);"
+        query_drop_table = f"DROP TABLE IF EXISTS {tbname};"
+        query_create_table = f"CREATE TABLE {tbname}({col_type})"
         cursor.execute(query_db)
         cursor.execute(query_drop_table)
         cursor.execute(query_create_table)
-        conn.commit()
         print("Table Created")
         return True
     except Error as tb_create_err:
@@ -82,7 +91,12 @@ def create_table(conn:sql.connection.MySQLConnection, cursor:sql.connection.MySQ
 
 # TODO-4: Inserting Data to Table
 # Another task; find what datatypes for data will be passed as argument (list, string, dictionary, tuple)
-def insert_data_to_table(conn:sql.connection.MySQLConnection, cursor:sql.connection.MySQLCursor, database:str, table:str) -> bool:
+def insert_data_to_table(conn:sql.connection.MySQLConnection, 
+                         cursor:sql.connection.MySQLCursor, 
+                         database:str, 
+                         table:str,
+                         total_field:str,
+                         dataframe:pd.DataFrame) -> int:
     """Insert data to given table from the database provided as an argument
 
     Args:
@@ -90,30 +104,21 @@ def insert_data_to_table(conn:sql.connection.MySQLConnection, cursor:sql.connect
         cursor (sql.connection.MySQLCursor):  cursor string as argument
         database (str): database name to insert table 
         table (str): table name to which the data will be inserted
-
+        total_field (str): total fields for columns
     Returns:
         bool: returns True/False if query executed successfully or not
     """
 
     try:
-        query_insert = [
-        f"use {database}",
-        f"insert into {table} (id, first_name, last_name, age, phone) values (1, 'Minta', 'Wippermann', 78, 2895998422);",
-        f"insert into {table} (id, first_name, last_name, age, phone) values (2, 'Griffin', 'Furnell', 11, 8857522377);",
-        f"insert into {table} (id, first_name, last_name, age, phone) values (3, 'Tobye', 'Guillain', 26, 2207983495);",
-        f"insert into {table} (id, first_name, last_name, age, phone) values (4, 'Gal', 'Lapwood', 92, 2177056055);",
-        f"insert into {table} (id, first_name, last_name, age, phone) values (5, 'Ardra', 'Brewett', 74, 5551325933);",
-        f"insert into {table} (id, first_name, last_name, age, phone) values (6, 'Nicolis', 'Dudman', 69, 6253628898);",
-        f"insert into {table} (id, first_name, last_name, age, phone) values (7, 'Shantee', 'Birtwell', 65, 4875603253);",
-        f"insert into {table} (id, first_name, last_name, age, phone) values (8, 'Barb', 'Probet', 32, 4072367541);",
-        f"insert into {table} (id, first_name, last_name, age, phone) values (9, 'Paige', 'Critchley', 94, 6658769260);",
-        f"insert into {table} (id, first_name, last_name, age, phone) values (10, 'Chase', 'Meredith', 27, 9609026336);",]
-        
-        for i in query_insert:
-            cursor.execute(i)
-        conn.commit()
+        row_inserted = 0
+        for _, row in dataframe.iterrows():
+            sql = f"INSERT INTO {database}.{table} VALUES ({total_field})"
+            cursor.execute(sql, tuple(row))
+            if cursor.rowcount == 1:
+                row_inserted += 1
+                conn.commit()
         print("Data Inserted To table")
-        return True
+        return row_inserted
     except Error as insert_error:
         raise(insert_error)
 
@@ -139,49 +144,42 @@ def get_data_from_table(table:str, cursor:sql.connection.MySQLCursor, database:s
         return cursor.fetchall()
     except Error as pull_data_error:
         raise(pull_data_error)
-        
 
 
-# TODO-6: Close Connection Method
-def close_connection(curs:sql.connection.MySQLCursor, conn:sql.connection.MySQLConnection) -> bool:
-    """ Closes Connection To Server
+# TODO-6: Get Data From CSV
+def get_data_from_csv(fname:str) -> pd.DataFrame:
+    """Reading csv file and returning Dataframe
 
     Args:
-        curs (sql.connection.MySQLCursor): Cursor string
-        conn (sql.connection.MySQLConnection): Connection string
+        fname (str): location where csv file is located
 
     Returns:
-        bool: returns True if connection is closed else False
+        _type_: return pandas datatype
     """
+    df = pd.read_csv(fname)
+    return df
+
+# TODO-7: Create Schema
+def schema_template(dataframe) -> Tuple[str, str]:
+    """ Create general template for rows to be inserted in table
+
+    Args:
+        dataframe (_type_): pass pandas Dataframe loaded with data
+
+    Returns:
+        _type_: column data types and total fields in form of string Tuple
+    """
+    types = ""
     
-    try:
-        curs.close()
-        conn.close()
-        print("Connection Closed")
-        return True
-    except Error as conn_error:
-        raise(conn_error)
-
-
-
-""" optimize this code to return direct error without crashing code in this case
-A). when connection to sserver failed then what to do as exception will also throw error while rollback
-"""
-def main():
-    try:
-        conn, curs = connect_to_mysql(host=os.environ['HOST'], user=os.environ['USER'], port=os.environ['PORT'])
-        create_database(conn, curs)
-        create_table(conn=conn,cursor= curs, database=os.environ['DATABASE'])
-        insert_data_to_table(conn=conn, database=os.environ['DATABASE'], cursor=curs, table="students")
-        returned_data = get_data_from_table(table='students', cursor=curs, database=os.environ['DATABASE'])
-        [print (i) for i in returned_data ]
-
-    except Error as error:
-        conn.rollback()
-        print(error)
-    finally:
-        close_connection(curs=curs, conn=conn)
-
-
-if __name__ == '__main__':
-    main()
+    for i, col_type in enumerate(dataframe.dtypes):
+        col_name = dataframe.columns[i]
+        col_name = col_name.replace('.', '_')
+        if col_type == 'object':
+            types += f'{col_name} VARCHAR(255), '
+        elif col_type == 'float64':
+            types += f'{col_name} DECIMAL(6,2), '
+        elif col_type == 'int64':
+            types += f'{col_name} INT, '
+    col_datatypes = types[:-2]
+    total_fields = ', '.join(len(dataframe.columns) * ['%s'])
+    return col_datatypes, total_fields
