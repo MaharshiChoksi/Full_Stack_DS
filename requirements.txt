@@ -1,0 +1,4 @@
+msql-connector
+dotenv
+pandas
+argparse
