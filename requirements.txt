@@ -1,5 +1,4 @@
-os
-typing
 msql-connector
 dotenv
 pandas
+argparse
