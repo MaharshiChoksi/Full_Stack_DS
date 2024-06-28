@@ -157,6 +157,7 @@ def get_data_from_csv(fname:str) -> pd.DataFrame:
         _type_: return pandas datatype
     """
     df = pd.read_csv(fname)
+    df.drop(['Unnamed: 0'], axis=1, inplace=True, errors='ignore')
     return df
 
 # TODO-7: Create Schema
