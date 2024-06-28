@@ -24,7 +24,7 @@ parser = argparse.ArgumentParser(prog='database',
 parser.add_argument('-dbc', '--db_create',
                     default='F',
                     type=str,
-                    help='pass True to create new database or else False')
+                    help='pass T to create new database or else F or TI to create and insert')
 
 parser.add_argument('-f', '--filename',
                     type=str,

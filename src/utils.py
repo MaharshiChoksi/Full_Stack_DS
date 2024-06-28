@@ -117,7 +117,7 @@ def insert_data_to_table(conn:sql.connection.MySQLConnection,
             if cursor.rowcount == 1:
                 row_inserted += 1
                 conn.commit()
-        print("Data Inserted To table")
+        print(f"{row_inserted} Data Inserted To table")
         return row_inserted
     except Error as insert_error:
         raise(insert_error)
